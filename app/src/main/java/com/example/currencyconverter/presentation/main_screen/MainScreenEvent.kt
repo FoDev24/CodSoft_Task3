@@ -5,5 +5,5 @@ sealed class MainScreenEvent{
     object ToCurrencySelect : MainScreenEvent()
     object SwapIconClicked : MainScreenEvent()
     data class BottomSheetItemClicked(val value:String) : MainScreenEvent()
-    data class NumberSheetItemClicked(val value:String) : MainScreenEvent()
+    data class NumberButtonItemClicked(val value:String) : MainScreenEvent()
 }

@@ -2,9 +2,11 @@ package com.example.currencyconverter.presentation.main_screen
 
 
 import android.os.Build
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,28 +30,36 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.currencyconverter.R
 import com.example.currencyconverter.presentation.main_screen.common.NumberKey
-import java.nio.file.WatchEvent
 
 @RequiresApi(Build.VERSION_CODES.M)
 @Composable
 fun MainScreen(
-    state : MainScreenState,
-    onEvent : (MainScreenEvent) -> Unit
+    state: MainScreenState,
+    onEvent: (MainScreenEvent) -> Unit
 ) {
 
     val keys = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "C")
+
+    val context = LocalContext.current
+
+    LaunchedEffect(key1 = state.error) {
+        if (state.error != null) {
+            Toast.makeText(context, state.error, Toast.LENGTH_LONG)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -80,15 +90,22 @@ fun MainScreen(
                         CurrencyRow(
                             modifier = Modifier.fillMaxWidth(),
                             currencyCode = state.fromCurrencyCode,
-                            currencyName = state.currencyRates[state.toCurrencyCode]?.name?:"",
+                            currencyName = state.currencyRates[state.fromCurrencyCode]?.name ?: "",
                             onDropDownIconClicked = {}
                         )
                         Text(
                             text = state.fromCurrencyValue,
                             fontSize = 40.sp,
-                            modifier = Modifier.clickable {
-                                onEvent(MainScreenEvent.FromCurrencySelect)
-                            }
+                            modifier = Modifier.clickable(
+                                interactionSource = MutableInteractionSource(),
+                                indication = null,
+                                onClick = {
+                                    onEvent(MainScreenEvent.FromCurrencySelect)
+                                }
+                            ) ,
+                            color = if(state.selection == SelectionStates.FROM){
+                                MaterialTheme.colorScheme.primary
+                            }else MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -105,15 +122,22 @@ fun MainScreen(
                         Text(
                             text = state.toCurrencyValue,
                             fontSize = 40.sp,
-                            modifier = Modifier.clickable {
-                                onEvent(MainScreenEvent.ToCurrencySelect)
-                            }
+                            modifier = Modifier.clickable (
+                                interactionSource = MutableInteractionSource(),
+                                indication = null,
+                                onClick = {
+                                    onEvent(MainScreenEvent.ToCurrencySelect)
+                                }
+                            ) ,
+                            color = if(state.selection == SelectionStates.TO){
+                                MaterialTheme.colorScheme.primary
+                            }else MaterialTheme.colorScheme.onSurface
                         )
 
                         CurrencyRow(
                             modifier = Modifier.fillMaxWidth(),
                             currencyCode = state.toCurrencyCode,
-                            currencyName = state.currencyRates[state.toCurrencyCode]?.name?:"",
+                            currencyName = state.currencyRates[state.toCurrencyCode]?.name ?: "",
                             onDropDownIconClicked = {}
                         )
 
@@ -145,11 +169,11 @@ fun MainScreen(
 
             items(keys) { key ->
                 NumberKey(
-                    modifier = Modifier.aspectRatio(1f ),
+                    modifier = Modifier.aspectRatio(1f),
                     backgroundColor = if (key == "C") MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.surfaceVariant,
                     key = key,
-                    onClick = {onEvent(MainScreenEvent.NumberSheetItemClicked(key))}
+                    onClick = { onEvent(MainScreenEvent.NumberButtonItemClicked(key)) }
                 )
 
             }
