@@ -24,13 +24,23 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,7 +53,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.currencyconverter.R
 import com.example.currencyconverter.presentation.main_screen.common.NumberKey
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.M)
 @Composable
 fun MainScreen(
@@ -57,8 +69,45 @@ fun MainScreen(
 
     LaunchedEffect(key1 = state.error) {
         if (state.error != null) {
-            Toast.makeText(context, state.error, Toast.LENGTH_LONG)
+            Toast.makeText(context, state.error, Toast.LENGTH_LONG).show()
         }
+    }
+
+    val scope = rememberCoroutineScope()
+    val sheetState = rememberModalBottomSheetState()
+    var shouldBottomSheetShow by remember { mutableStateOf(false) }
+
+    if (shouldBottomSheetShow) {
+        ModalBottomSheet(
+            sheetState = sheetState,
+            onDismissRequest = { shouldBottomSheetShow = false },
+            dragHandle = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    BottomSheetDefaults.DragHandle()
+                    Text(
+                        text = "Select Currency",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Divider()
+                }
+            },
+            content = {
+                BottomSheetContent(
+                    onItemClicked = { currencyCode ->
+                        onEvent(MainScreenEvent.BottomSheetItemClicked(currencyCode))
+                        scope.launch { sheetState.hide() }.invokeOnCompletion {
+                            if (!sheetState.isVisible) shouldBottomSheetShow = false
+                        }
+                    },
+                    currenciesList = state.currencyRates.values.toList()
+                )
+            }
+        )
     }
 
     Column(
@@ -68,15 +117,16 @@ fun MainScreen(
         verticalArrangement = Arrangement.SpaceAround
     ) {
         Text(
-            text = "Currency Converter",
             modifier = Modifier.fillMaxWidth(),
+            text = "CoinSwap",
             fontFamily = FontFamily.Cursive,
             fontSize = 40.sp,
             textAlign = TextAlign.Center,
             fontWeight = FontWeight.Bold
         )
-
-        Box(contentAlignment = Alignment.CenterStart) {
+        Box(
+            contentAlignment = Alignment.CenterStart
+        ) {
             Column {
                 Card(
                     modifier = Modifier.fillMaxWidth()
@@ -91,7 +141,10 @@ fun MainScreen(
                             modifier = Modifier.fillMaxWidth(),
                             currencyCode = state.fromCurrencyCode,
                             currencyName = state.currencyRates[state.fromCurrencyCode]?.name ?: "",
-                            onDropDownIconClicked = {}
+                            onDropDownIconClicked = {
+                                shouldBottomSheetShow = true
+                                onEvent(MainScreenEvent.FromCurrencySelect)
+                            }
                         )
                         Text(
                             text = state.fromCurrencyValue,
@@ -99,13 +152,11 @@ fun MainScreen(
                             modifier = Modifier.clickable(
                                 interactionSource = MutableInteractionSource(),
                                 indication = null,
-                                onClick = {
-                                    onEvent(MainScreenEvent.FromCurrencySelect)
-                                }
-                            ) ,
-                            color = if(state.selection == SelectionStates.FROM){
+                                onClick = { onEvent(MainScreenEvent.FromCurrencySelect) }
+                            ),
+                            color = if (state.selection == SelectionStates.FROM) {
                                 MaterialTheme.colorScheme.primary
-                            }else MaterialTheme.colorScheme.onSurface
+                            } else MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -122,25 +173,24 @@ fun MainScreen(
                         Text(
                             text = state.toCurrencyValue,
                             fontSize = 40.sp,
-                            modifier = Modifier.clickable (
+                            modifier = Modifier.clickable(
                                 interactionSource = MutableInteractionSource(),
                                 indication = null,
-                                onClick = {
-                                    onEvent(MainScreenEvent.ToCurrencySelect)
-                                }
-                            ) ,
-                            color = if(state.selection == SelectionStates.TO){
+                                onClick = { onEvent(MainScreenEvent.ToCurrencySelect) }
+                            ),
+                            color = if (state.selection == SelectionStates.TO) {
                                 MaterialTheme.colorScheme.primary
-                            }else MaterialTheme.colorScheme.onSurface
+                            } else MaterialTheme.colorScheme.onSurface
                         )
-
                         CurrencyRow(
                             modifier = Modifier.fillMaxWidth(),
                             currencyCode = state.toCurrencyCode,
                             currencyName = state.currencyRates[state.toCurrencyCode]?.name ?: "",
-                            onDropDownIconClicked = {}
+                            onDropDownIconClicked = {
+                                shouldBottomSheetShow = true
+                                onEvent(MainScreenEvent.ToCurrencySelect)
+                            }
                         )
-
                     }
                 }
             }
@@ -152,8 +202,8 @@ fun MainScreen(
                     .background(color = MaterialTheme.colorScheme.background)
             ) {
                 Icon(
-                    painter = painterResource(id = R.drawable.ic_swap),
-                    contentDescription = "Currency Swap",
+                    painter = painterResource(R.drawable.ic_swap),
+                    contentDescription = "Swap Currency",
                     modifier = Modifier
                         .padding(8.dp)
                         .size(25.dp),
@@ -161,31 +211,26 @@ fun MainScreen(
                 )
             }
         }
-
         LazyVerticalGrid(
             modifier = Modifier.padding(horizontal = 35.dp),
             columns = GridCells.Fixed(3)
         ) {
-
             items(keys) { key ->
                 NumberKey(
                     modifier = Modifier.aspectRatio(1f),
+                    key = key,
                     backgroundColor = if (key == "C") MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.surfaceVariant,
-                    key = key,
-                    onClick = { onEvent(MainScreenEvent.NumberButtonItemClicked(key)) }
+                    onClick = {
+                        onEvent(MainScreenEvent.NumberButtonItemClicked(key))
+                    }
                 )
-
             }
-
         }
-
     }
-
 
 }
 
-@RequiresApi(Build.VERSION_CODES.M)
 @Composable
 fun CurrencyRow(
     modifier: Modifier = Modifier,
@@ -208,3 +253,4 @@ fun CurrencyRow(
         Text(text = currencyName, fontSize = 14.sp, fontWeight = FontWeight.Bold)
     }
 }
+
